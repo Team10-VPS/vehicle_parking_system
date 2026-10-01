@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block content %}
+<h2>Book Slot {{ slot.slot_number }} (Floor {{ slot.floor }})</h2>
+<form method="post">
+  <p><input name="plate" placeholder="Vehicle number" required></p>
+  <p><select name="vehicle_type">
+    <option>car</option><option>bike</option><option>suv</option><option>van</option>
+  </select></p>
+  <button type="submit">Book &amp; Check-in</button>
+</form>{% endblock %}

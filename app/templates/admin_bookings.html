@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block content %}
+<h2>Active Bookings</h2>
+{% if not bookings %}<p>No active bookings.</p>{% else %}
+<table>
+<tr><th>User</th><th>Slot</th><th>Vehicle</th><th>Check-in</th><th></th></tr>
+{% for b in bookings %}
+<tr><td>{{ b.user.email }}</td><td>{{ b.slot.slot_number }}</td><td>{{ b.vehicle.plate }}</td><td>{{ b.check_in }}</td>
+<td><form method="post" action="{{ url_for('admin.force_checkout', booking_id=b.id) }}"><button>Force checkout</button></form></td></tr>
+{% endfor %}</table>{% endif %}{% endblock %}

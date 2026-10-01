@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block content %}
+<h2>My Booking History</h2>
+{% if not bookings %}<p>No bookings yet.</p>{% else %}
+<table>
+<tr><th>Slot</th><th>Vehicle</th><th>Check-in</th><th>Check-out</th><th>Status</th><th></th></tr>
+{% for b in bookings %}
+<tr><td>{{ b.slot.slot_number }}</td><td>{{ b.vehicle.plate }}</td>
+<td>{{ b.check_in }}</td><td>{{ b.check_out or '-' }}</td><td>{{ b.status }}</td>
+<td>{% if b.status == 'active' %}
+<form method="post" action="{{ url_for('bookings.checkout', booking_id=b.id) }}"><button>Check out</button></form>
+{% endif %}</td></tr>
+{% endfor %}</table>{% endif %}{% endblock %}
