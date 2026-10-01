@@ -21,7 +21,8 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Build check (app imports and creates)
-        run: python -c "from app import create_app; create_app({'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:'})"
+        run: >
+         python -c "from app import create_app; create_app({'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:'})"
 
       - name: Run unit and integration tests
         run: pytest -v --junitxml=report.xml
