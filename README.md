@@ -9,7 +9,7 @@ history and admin slot management. Built for the Software Engineering Mini Proje
 | Name | Contribution |
 |---|---|
 | Swapna | QA Lead, test plan |
-| Shreya R D | Test engineer |
+| Shreya R D | Test engineer, repo and organization setup, CI/CD pipeline |
 | Himani Nune | _fill in_ |
 | Atharv Sameer Sawarkar | _fill in_ |
 
