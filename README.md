@@ -10,8 +10,8 @@ history and admin slot management. Built for the Software Engineering Mini Proje
 |---|---|
 | Swapna | QA Lead, test plan |
 | Shreya R D | Test engineer, repo and organization setup, CI/CD pipeline |
-| Himani Nune | _fill in_ |
-| Atharv Sameer Sawarkar | _fill in_ |
+| Himani Nune | Frontend Development Lead, UI/UX and Feature Integration |
+| Atharv Sameer Sawarkar | Backend Development Lead, Database Design and Integration |
 
 ## Features
 - Registration (duplicate email check), login, logout, hashed passwords
