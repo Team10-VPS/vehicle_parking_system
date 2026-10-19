@@ -1,6 +1,10 @@
 """Slot display and booking integration tests."""
 import time
 
+import pytest
+from sqlalchemy import event
+from sqlalchemy.exc import SQLAlchemyError
+
 from app import db
 from app.models import Booking, ParkingSlot, Vehicle
 
@@ -26,10 +30,21 @@ def test_dashboard_empty(user_client):
     assert b"No parking slots available" in user_client.get("/").data
 
 
+def test_booking_form_posts_required_fields(user_client, make_slot):
+    """TC-Book-01: the form submits the selected slot to POST /book."""
+    sid = make_slot()
+    response = user_client.get(f"/book/{sid}")
+    assert response.status_code == 200
+    assert b'action="/book"' in response.data
+    assert f'name="slot_id" value="{sid}"'.encode() in response.data
+    assert b'name="vehicle_number"' in response.data
+    assert b'name="vehicle_type"' in response.data
+
+
 def test_book_available_slot(user_client, make_slot, app):
     """TC-Book-01 / TC-Book-02 / TC-Book-04 / TC-Rel-01"""
     sid = make_slot()
-    r = user_client.post(f"/book/{sid}", data={"plate": "ka01ab1234", "vehicle_type": "car"},
+    r = user_client.post("/book", data={"slot_id": sid, "vehicle_number": "ka01ab1234", "vehicle_type": "car"},
                          follow_redirects=True)
     assert b"booked" in r.data
     with app.app_context():
@@ -42,27 +57,29 @@ def test_book_available_slot(user_client, make_slot, app):
 def test_cannot_book_occupied_slot(user_client, make_slot, app):
     """TC-Slot-03"""
     sid = make_slot(status="occupied")
-    r = user_client.post(f"/book/{sid}", data={"plate": "KA01AB1234"}, follow_redirects=True)
+    r = user_client.post("/book", data={"slot_id": sid, "vehicle_number": "KA01AB1234", "vehicle_type": "car"})
+    assert r.status_code == 409
     assert b"already occupied" in r.data
     with app.app_context():
         assert Booking.query.count() == 0
 
 
 def test_book_nonexistent_slot(user_client):
-    r = user_client.post("/book/999", data={"plate": "KA01AB1234"}, follow_redirects=True)
+    r = user_client.post("/book", data={"slot_id": 999, "vehicle_number": "KA01AB1234", "vehicle_type": "car"})
+    assert r.status_code == 404
     assert b"Slot not found" in r.data
 
 
 def test_booking_reuses_existing_vehicle(user_client, make_slot, app):
     """TC-Book-03"""
     s1, s2 = make_slot("A-01"), make_slot("A-02")
-    user_client.post(f"/book/{s1}", data={"plate": "KA01AB1234"})
+    user_client.post("/book", data={"slot_id": s1, "vehicle_number": "KA01AB1234", "vehicle_type": "car"})
     with app.app_context():
         first = Booking.query.one()
         first.status = "completed"
         first.slot.status = "available"
         db.session.commit()
-    user_client.post(f"/book/{s2}", data={"plate": "KA01AB1234"})
+    user_client.post("/book", data={"slot_id": s2, "vehicle_number": "KA01AB1234", "vehicle_type": "car"})
     with app.app_context():
         assert Vehicle.query.count() == 1
         assert Booking.query.count() == 2
@@ -71,7 +88,8 @@ def test_booking_reuses_existing_vehicle(user_client, make_slot, app):
 def test_booking_invalid_plate_rejected(user_client, make_slot, app):
     """TC-Book-02 error / TC-Sec-04"""
     sid = make_slot()
-    r = user_client.post(f"/book/{sid}", data={"plate": "<b>"})
+    r = user_client.post("/book", data={"slot_id": sid, "vehicle_number": "<b>", "vehicle_type": "car"})
+    assert r.status_code == 400
     assert b"valid vehicle number" in r.data
     with app.app_context():
         assert Booking.query.count() == 0
@@ -80,7 +98,46 @@ def test_booking_invalid_plate_rejected(user_client, make_slot, app):
 
 def test_booking_requires_login(client, make_slot):
     sid = make_slot()
-    assert client.post(f"/book/{sid}", data={"plate": "KA01AB1234"}).status_code == 302
+    assert client.post("/book", data={"slot_id": sid, "vehicle_number": "KA01AB1234", "vehicle_type": "car"}).status_code == 302
+
+
+@pytest.mark.parametrize("field,value", [
+    ("slot_id", ""), ("slot_id", "abc"), ("slot_id", "-1"),
+    ("slot_id", "9" * 100),
+    ("vehicle_number", ""), ("vehicle_type", "truck"),
+])
+def test_booking_rejects_invalid_input(user_client, make_slot, app, field, value):
+    """TC-Book-02 / TC-Book-04: malformed form data returns 400 with no changes."""
+    sid = make_slot()
+    data = {"slot_id": str(sid), "vehicle_number": "KA01AB1234", "vehicle_type": "car"}
+    data[field] = value
+    response = user_client.post("/book", data=data)
+    assert response.status_code == 400
+    assert b"flash" in response.data
+    with app.app_context():
+        assert db.session.get(ParkingSlot, sid).status == "available"
+        assert Booking.query.count() == Vehicle.query.count() == 0
+
+
+def test_booking_rolls_back_database_failure(user_client, make_slot, app):
+    """TC-Book-04: a failed insert leaves the slot and vehicle unchanged."""
+    sid = make_slot()
+
+    def fail_booking_insert(_mapper, _connection, _target):
+        raise SQLAlchemyError("simulated insert failure")
+
+    event.listen(Booking, "before_insert", fail_booking_insert)
+    try:
+        response = user_client.post("/book", data={
+            "slot_id": sid, "vehicle_number": "KA01AB1234", "vehicle_type": "car"
+        })
+    finally:
+        event.remove(Booking, "before_insert", fail_booking_insert)
+    assert response.status_code == 500
+    assert b"Booking could not be completed" in response.data
+    with app.app_context():
+        assert db.session.get(ParkingSlot, sid).status == "available"
+        assert Booking.query.count() == Vehicle.query.count() == 0
 
 
 def test_dashboard_performance_200_slots(user_client, make_slot, app):
