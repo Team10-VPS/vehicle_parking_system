@@ -9,7 +9,8 @@ from app.utils import current_user, login_required, valid_plate
 slots_bp = Blueprint("slots", __name__)
 
 
-@slots_bp.route("/")
+@slots_bp.route("/", endpoint="home")
+@slots_bp.route("/dashboard")
 @login_required
 def dashboard():
     slots = ParkingSlot.query.order_by(ParkingSlot.floor, ParkingSlot.slot_number).all()

@@ -13,12 +13,36 @@ def test_dashboard_lists_slots(user_client, make_slot):
     assert b"A-01" in r.data and b"A-02" in r.data
 
 
+def test_dashboard_route(user_client):
+    """Dashboard is accessible at /dashboard."""
+    response = user_client.get("/dashboard")
+
+    assert response.status_code == 200
+    assert b"Parking Slots" in response.data
+
+
+
 def test_dashboard_groups_by_floor(user_client, make_slot):
     """TC-Slot-02"""
     make_slot("B-01", 2)
     make_slot("A-01", 1)
     body = user_client.get("/").data.decode()
     assert body.index("Floor 1") < body.index("A-01") < body.index("Floor 2") < body.index("B-01")
+
+def test_dashboard_orders_slots_by_floor_and_number(
+    user_client, make_slot
+):
+    """Slots are ordered by floor, then slot number."""
+    make_slot("A-02", 1)
+    make_slot("A-01", 1)
+    make_slot("B-01", 2)
+
+    response = user_client.get("/dashboard")
+    body = response.data.decode()
+
+    assert body.index("Floor 1") < body.index("Floor 2")
+    assert body.index("A-01") < body.index("A-02")
+    assert body.index("A-02") < body.index("B-01")
 
 
 def test_dashboard_empty(user_client):
