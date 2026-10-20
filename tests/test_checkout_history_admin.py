@@ -5,7 +5,9 @@ from tests.conftest import login
 
 
 def book(client, sid, plate="KA01AB1234"):
-    return client.post(f"/book/{sid}", data={"plate": plate}, follow_redirects=True)
+    return client.post("/book", data={
+        "slot_id": sid, "vehicle_number": plate, "vehicle_type": "car"
+    }, follow_redirects=True)
 
 
 def test_customer_checkout(user_client, make_slot, app):
