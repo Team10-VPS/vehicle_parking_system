@@ -3,13 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>{% block title %}Vehicle Parking System{% endblock %}</title>
-  <style>
-    body{font-family:Arial,sans-serif;max-width:900px;margin:20px auto;padding:0 12px}
-    nav a{margin-right:12px} .flash{background:#fff3cd;padding:8px;margin:8px 0;border-radius:4px}
-    .slot{display:inline-block;padding:10px 14px;margin:4px;border-radius:6px;color:#fff}
-    .available{background:#2e7d32}.occupied{background:#c62828}
-    table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:6px;text-align:left}
-  </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 <nav>
