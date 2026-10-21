@@ -1,12 +1,15 @@
 """Slot display and booking integration tests."""
 import time
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 
 import pytest
 from sqlalchemy import event
 from sqlalchemy.exc import SQLAlchemyError
 
-from app import db
-from app.models import Booking, ParkingSlot, Vehicle
+from app import create_app, db
+from app.models import Booking, ParkingSlot, User, Vehicle
+from tests.conftest import login
 
 
 def test_dashboard_lists_slots(user_client, make_slot):
@@ -76,6 +79,103 @@ def test_book_available_slot(user_client, make_slot, app):
         b = Booking.query.one()
         assert b.status == "active" and b.check_in is not None and b.check_out is None
         assert Vehicle.query.one().plate == "KA01AB1234"
+
+    dashboard = user_client.get("/").data
+    assert f'href="/book/{sid}"'.encode() not in dashboard
+    assert b'class="slot occupied"' in dashboard
+
+
+def test_only_customers_can_select_or_book_slots(admin_client, make_slot, app):
+    """TC-Slot-03: admins cannot use the customer booking workflow."""
+    sid = make_slot()
+    dashboard = admin_client.get("/").data
+    assert f'href="/book/{sid}"'.encode() not in dashboard
+    assert b'class="slot available"' in dashboard
+    assert admin_client.get(f"/book/{sid}").status_code == 403
+    response = admin_client.post("/book", data={
+        "slot_id": sid, "vehicle_number": "KA01AB1234", "vehicle_type": "car"
+    })
+    assert response.status_code == 403
+    with app.app_context():
+        assert db.session.get(ParkingSlot, sid).status == "available"
+        assert Booking.query.count() == Vehicle.query.count() == 0
+
+
+def test_two_customers_cannot_book_same_slot(user_client, make_slot, make_user, app):
+    """TC-Slot-03 / TC-Book-01 / TC-Rel-01: only one booking succeeds."""
+    sid = make_slot()
+    make_user(email="second@test.com")
+    second_client = app.test_client()
+    login(second_client, "second@test.com")
+
+    first = user_client.post("/book", data={
+        "slot_id": sid, "vehicle_number": "KA01AB1234", "vehicle_type": "car"
+    })
+    second = second_client.post("/book", data={
+        "slot_id": sid, "vehicle_number": "KA02CD5678", "vehicle_type": "car"
+    })
+
+    assert first.status_code == 302
+    assert second.status_code == 409
+    with app.app_context():
+        assert Booking.query.filter_by(slot_id=sid, status="active").count() == 1
+        assert Vehicle.query.count() == 1
+        assert db.session.get(ParkingSlot, sid).status == "occupied"
+
+
+def test_available_status_cannot_override_active_booking(user_client, make_slot, app):
+    """TC-Rel-01: a stale slot status cannot create another active booking."""
+    sid = make_slot()
+    user_client.post("/book", data={
+        "slot_id": sid, "vehicle_number": "KA01AB1234", "vehicle_type": "car"
+    })
+    with app.app_context():
+        db.session.get(ParkingSlot, sid).status = "available"
+        db.session.commit()
+
+    response = user_client.post("/book", data={
+        "slot_id": sid, "vehicle_number": "KA02CD5678", "vehicle_type": "car"
+    })
+    assert response.status_code == 409
+    with app.app_context():
+        assert Booking.query.filter_by(slot_id=sid, status="active").count() == 1
+        assert Vehicle.query.count() == 1
+
+
+def test_simultaneous_requests_create_at_most_one_booking(tmp_path):
+    """TC-Rel-01: concurrent customers cannot both claim the same slot."""
+    database_uri = f"sqlite:///{(tmp_path / 'bookings.db').as_posix()}"
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": database_uri})
+    with app.app_context():
+        for email in ("first@test.com", "second@test.com"):
+            user = User(name=email, email=email)
+            user.set_password("secret123")
+            db.session.add(user)
+        slot = ParkingSlot(slot_number="A-01", floor=1)
+        db.session.add(slot)
+        db.session.commit()
+        slot_id = slot.id
+
+    barrier = Barrier(2)
+
+    def attempt(email, plate):
+        client = app.test_client()
+        login(client, email)
+        barrier.wait(timeout=10)
+        return client.post("/book", data={
+            "slot_id": slot_id, "vehicle_number": plate, "vehicle_type": "car"
+        }).status_code
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(attempt, "first@test.com", "KA01AB1234")
+        second = pool.submit(attempt, "second@test.com", "KA02CD5678")
+        statuses = sorted((first.result(), second.result()))
+
+    assert statuses == [302, 409]
+    with app.app_context():
+        assert Booking.query.filter_by(slot_id=slot_id, status="active").count() == 1
+        assert Vehicle.query.count() == 1
+        assert db.session.get(ParkingSlot, slot_id).status == "occupied"
 
 
 def test_cannot_book_occupied_slot(user_client, make_slot, app):
