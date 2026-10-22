@@ -7,6 +7,10 @@
 <tr><td>{{ b.slot.slot_number }}</td><td>{{ b.vehicle.plate }}</td>
 <td>{{ b.check_in }}</td><td>{{ b.check_out or '-' }}</td><td>{{ b.status }}</td>
 <td>{% if b.status == 'active' %}
-<form method="post" action="{{ url_for('bookings.checkout', booking_id=b.id) }}"><button>Check out</button></form>
+<form method="post"
+      action="{{ url_for('bookings.checkout', booking_id=b.id) }}"
+      onsubmit="return confirm('Are you sure you want to check out this booking?');">
+    <button type="submit">Check out</button>
+</form>
 {% endif %}</td></tr>
 {% endfor %}</table>{% endif %}{% endblock %}

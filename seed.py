@@ -3,8 +3,12 @@ Run once:  python seed.py
 Admin login:    admin@vps.com / admin123
 Customer login: user@vps.com  / user123
 """
+import os
+
 from app import create_app, db
 from app.models import ParkingSlot, User
+
+os.environ.setdefault("SECRET_KEY", "dev-only-secret-key")
 
 app = create_app()
 with app.app_context():

@@ -142,15 +142,23 @@ def test_available_status_cannot_override_active_booking(user_client, make_slot,
         assert Vehicle.query.count() == 1
 
 
+
 def test_simultaneous_requests_create_at_most_one_booking(tmp_path):
     """TC-Rel-01: concurrent customers cannot both claim the same slot."""
     database_uri = f"sqlite:///{(tmp_path / 'bookings.db').as_posix()}"
-    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": database_uri})
+
+    app = create_app({
+        "TESTING": True,
+        "SECRET_KEY": "test-secret-key-only",
+        "SQLALCHEMY_DATABASE_URI": database_uri,
+    })
+
     with app.app_context():
         for email in ("first@test.com", "second@test.com"):
             user = User(name=email, email=email)
             user.set_password("secret123")
             db.session.add(user)
+
         slot = ParkingSlot(slot_number="A-01", floor=1)
         db.session.add(slot)
         db.session.commit()
@@ -163,7 +171,9 @@ def test_simultaneous_requests_create_at_most_one_booking(tmp_path):
         login(client, email)
         barrier.wait(timeout=10)
         return client.post("/book", data={
-            "slot_id": slot_id, "vehicle_number": plate, "vehicle_type": "car"
+            "slot_id": slot_id,
+            "vehicle_number": plate,
+            "vehicle_type": "car",
         }).status_code
 
     with ThreadPoolExecutor(max_workers=2) as pool:
@@ -172,11 +182,13 @@ def test_simultaneous_requests_create_at_most_one_booking(tmp_path):
         statuses = sorted((first.result(), second.result()))
 
     assert statuses == [302, 409]
+
     with app.app_context():
-        assert Booking.query.filter_by(slot_id=slot_id, status="active").count() == 1
+        assert Booking.query.filter_by(
+            slot_id=slot_id, status="active"
+        ).count() == 1
         assert Vehicle.query.count() == 1
         assert db.session.get(ParkingSlot, slot_id).status == "occupied"
-
 
 def test_cannot_book_occupied_slot(user_client, make_slot, app):
     """TC-Slot-03"""

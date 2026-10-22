@@ -22,13 +22,15 @@ def test_customer_checkout(user_client, make_slot, app):
         assert db.session.get(ParkingSlot, sid).status == "available"
 
 
-def test_double_checkout_blocked(user_client, make_slot):
-    """TC-Checkout-01 boundary"""
+def test_double_checkout_returns_409(user_client, make_slot):
+    """TC-Checkout-01 boundary: completed booking returns HTTP 409."""
     book(user_client, make_slot())
-    user_client.post("/checkout/1")
-    r = user_client.post("/checkout/1", follow_redirects=True)
-    assert b"already checked out" in r.data
+    first_response = user_client.post("/checkout/1")
+    assert first_response.status_code == 302
 
+    second_response = user_client.post("/checkout/1")
+    assert second_response.status_code == 409
+    assert b"already completed" in second_response.data
 
 def test_other_customer_cannot_checkout(app, user_client, make_slot, make_user):
     """TC-Checkout-02 / VPS-SR-005"""
@@ -131,3 +133,13 @@ def test_slot_status_consistent_with_bookings(user_client, make_slot, app):
         occupied = ParkingSlot.query.filter_by(status="occupied").count()
         active = Booking.query.filter_by(status="active").count()
         assert occupied == active == 2
+
+
+def test_history_checkout_has_confirmation_prompt(user_client, make_slot):
+    """Checkout button asks for confirmation before submitting."""
+    book(user_client, make_slot())
+    response = user_client.get("/history")
+
+    assert response.status_code == 200
+    assert b"onsubmit" in response.data
+    assert b"Are you sure you want to check out this booking?" in response.data
