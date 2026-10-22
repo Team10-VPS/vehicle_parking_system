@@ -1,4 +1,5 @@
 """Integration tests: routes + database + session."""
+import logging
 from app import db
 from app.models import User
 from tests.conftest import login
@@ -83,3 +84,59 @@ def test_logout_invalidates_session(user_client):
     r = user_client.get("/")
     assert r.status_code == 302 and "/login" in r.headers["Location"]
     assert user_client.get("/history").status_code == 302
+
+
+
+def test_failed_login_is_logged(client, caplog):
+    """Failed login attempts must be logged without exposing passwords."""
+    caplog.set_level(logging.WARNING, logger="app.routes.auth")
+
+    password = "NeverLogThisPassword123"
+    login(client, email="ghost@test.com", password=password)
+
+    records = [
+        record
+        for record in caplog.records
+        if getattr(record, "action", None) == "login_failure"
+    ]
+
+    assert len(records) == 1
+    assert records[0].levelno == logging.WARNING
+    assert records[0].user_id is None
+    assert "ghost@test.com" in records[0].getMessage()
+    assert password not in records[0].getMessage()
+
+
+def test_successful_login_is_logged(client, make_user, caplog):
+    """Successful login must produce an INFO log."""
+    caplog.set_level(logging.INFO, logger="app.routes.auth")
+    user_id = make_user()
+
+    login(client)
+
+    records = [
+        record for record in caplog.records
+        if getattr(record, "action", None) == "login_success"
+    ]
+
+    assert len(records) == 1
+    assert records[0].levelno == logging.INFO
+    assert records[0].user_id == user_id
+    assert "login_success" in records[0].getMessage()
+
+
+def test_logout_is_logged(user_client, caplog):
+    """Logout must produce an INFO log."""
+    caplog.set_level(logging.INFO, logger="app.routes.auth")
+
+    user_client.get("/logout")
+
+    records = [
+        record for record in caplog.records
+        if getattr(record, "action", None) == "logout"
+    ]
+
+    assert len(records) == 1
+    assert records[0].levelno == logging.INFO
+    assert records[0].user_id is not None
+    assert "logout" in records[0].getMessage()

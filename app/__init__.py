@@ -1,13 +1,49 @@
+
+import logging
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
 
+class SafeFormatter(logging.Formatter):
+    """Format logs safely when user ID or action fields are missing."""
+
+    def format(self, record):
+        if not hasattr(record, "user_id"):
+            record.user_id = "unknown"
+        if not hasattr(record, "action"):
+            record.action = "general"
+        return super().format(record)
+
+
+def configure_logging():
+    """Configure consistent logging for the application."""
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+
+    # Avoid adding duplicate handlers if the app is created more than once.
+    if not any(getattr(handler, "_vps_log_handler", False)
+               for handler in root_logger.handlers):
+        handler = logging.StreamHandler()
+        handler._vps_log_handler = True
+        handler.setFormatter(
+            SafeFormatter(
+                "%(asctime)s %(levelname)s "
+                "user_id=%(user_id)s action=%(action)s %(message)s"
+            )
+        )
+        root_logger.addHandler(handler)
+
+
 def create_app(config=None):
     app = Flask(__name__)
+    configure_logging()
+
     app.config["SECRET_KEY"] = "change-me-in-production"
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///vps.db"
+
     if config:
         app.config.update(config)
 
@@ -30,4 +66,5 @@ def create_app(config=None):
 
     with app.app_context():
         db.create_all()
+
     return app

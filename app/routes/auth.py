@@ -1,3 +1,5 @@
+import logging
+
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from app import db
@@ -5,6 +7,8 @@ from app.models import User
 from app.utils import MIN_PASSWORD_LEN, valid_email
 
 auth_bp = Blueprint("auth", __name__)
+
+logger = logging.getLogger(__name__)
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
@@ -38,15 +42,35 @@ def login():
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         user = User.query.filter_by(email=email).first()
+
         if user and user.check_password(password):
             session.clear()
             session["user_id"] = user.id
+            logger.info(
+                "user_id=%s action=login_success",
+                user.id,
+                extra={"user_id": user.id, "action": "login_success"},
+            )
             return redirect(url_for("slots.dashboard"))
+
+        logger.warning(
+            "user_id=unknown action=login_failure email=%s",
+            email,
+            extra={"user_id": None, "action": "login_failure"},
+        )
         flash("Invalid email or password.")
+
     return render_template("login.html")
 
 
 @auth_bp.route("/logout")
 def logout():
+    user_id = session.get("user_id")
+    if user_id is not None:
+        logger.info(
+            "user_id=%s action=logout",
+            user_id,
+            extra={"user_id": user_id, "action": "logout"},
+        )
     session.clear()
     return redirect(url_for("auth.login"))
