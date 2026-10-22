@@ -1,5 +1,8 @@
 """Integration tests: routes + database + session."""
 import logging
+from sqlalchemy import event
+from sqlalchemy.exc import IntegrityError
+
 from app import db
 from app.models import User
 from tests.conftest import login
@@ -12,11 +15,16 @@ def register(client, name="Ann", email="ann@test.com", password="secret123"):
 
 def test_register_success(client, app):
     """TC-Reg-01"""
-    r = register(client)
-    assert b"Registration successful" in r.data
+    r = client.post("/register", data={
+        "name": "Ann", "email": " ANN@TEST.COM ", "password": "secret123"
+    })
+    assert r.status_code == 302 and r.headers["Location"].endswith("/login")
+    assert b"Registration successful" in client.get("/login").data
     with app.app_context():
-        u = User.query.filter_by(email="ann@test.com").first()
-        assert u is not None and u.password_hash != "secret123"
+        assert User.query.count() == 1
+        u = User.query.one()
+        assert u.name == "Ann" and u.email == "ann@test.com" and u.role == "customer"
+        assert u.password_hash != "secret123" and u.check_password("secret123")
 
 
 def test_register_duplicate_email(client, app):
@@ -28,11 +36,13 @@ def test_register_duplicate_email(client, app):
         assert User.query.filter_by(email="ann@test.com").count() == 1
 
 
-def test_register_duplicate_email_case_insensitive(client):
+def test_register_duplicate_email_case_insensitive(client, app):
     """TC-Reg-02 (boundary)"""
     register(client)
-    r = register(client, email="ANN@TEST.COM")
+    r = register(client, email=" ANN@TEST.COM ")
     assert b"Email already registered" in r.data
+    with app.app_context():
+        assert User.query.count() == 1
 
 
 def test_register_invalid_inputs(client, app):
@@ -40,8 +50,35 @@ def test_register_invalid_inputs(client, app):
     assert b"valid email" in register(client, email="bad").data
     assert b"at least 6" in register(client, password="123").data
     assert b"Name is required" in register(client, name="  ").data
+    assert b"Name is required" in register(client, name="").data
+    assert b"valid email" in register(client, email="").data
+    assert b"Password is required" in register(client, password="      ").data
+    assert b"Password is required" in register(client, password="").data
+    assert b"100 characters or fewer" in register(client, name="N" * 101).data
+    assert b"120 characters or fewer" in register(client, email="a" * 112 + "@test.com").data
     with app.app_context():
         assert User.query.count() == 0
+
+
+def test_register_rolls_back_duplicate_at_commit(client, app):
+    """TC-Reg-02: a database uniqueness race returns feedback, not a server error."""
+    def duplicate_at_insert(_mapper, _connection, _target):
+        raise IntegrityError("INSERT INTO user", {}, Exception("UNIQUE constraint failed: user.email"))
+
+    event.listen(User, "before_insert", duplicate_at_insert)
+    try:
+        response = register(client)
+    finally:
+        event.remove(User, "before_insert", duplicate_at_insert)
+
+    assert response.status_code == 200
+    assert b"Email already registered" in response.data
+    with app.app_context():
+        assert User.query.count() == 0
+
+    assert b"Registration successful" in register(client).data
+    with app.app_context():
+        assert User.query.count() == 1
 
 
 def test_register_script_input_is_escaped(client):

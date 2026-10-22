@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
-from sqlalchemy import update
+from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
@@ -25,6 +25,8 @@ def dashboard():
 @slots_bp.route("/book/<int:slot_id>", methods=["GET"])
 @login_required
 def book(slot_id):
+    if current_user().role != "customer":
+        abort(403)
     slot = db.session.get(ParkingSlot, slot_id)
     if slot is None:
         flash("Slot not found.")
@@ -47,6 +49,10 @@ def booking_error(message, status, slot=None):
 @slots_bp.route("/book", methods=["POST"])
 @login_required
 def create_booking():
+    user = current_user()
+    if user.role != "customer":
+        abort(403)
+
     raw_slot_id = request.form.get("slot_id", "").strip()
     plate = request.form.get("vehicle_number", "").strip().upper()
     vtype = request.form.get("vehicle_type", "").strip().lower()
@@ -70,16 +76,18 @@ def create_booking():
     if slot.status != "available":
         return booking_error("That slot is already occupied.", 409)
 
-    user = current_user()
     vehicle = Vehicle.query.filter_by(plate=plate).first()
     if vehicle and vehicle.owner_id != user.id:
         return booking_error("That vehicle is registered to another user.", 409, slot)
 
     try:
-        # Claim the slot conditionally so a second request cannot book it after our read.
+        # Claim the slot only if it is free and has no active booking.
+        active_booking = select(Booking.id).where(
+            Booking.slot_id == ParkingSlot.id, Booking.status == "active"
+        ).exists()
         claimed = db.session.execute(
             update(ParkingSlot)
-            .where(ParkingSlot.id == slot_id, ParkingSlot.status == "available")
+            .where(ParkingSlot.id == slot_id, ParkingSlot.status == "available", ~active_booking)
             .values(status="occupied")
         ).rowcount
         if claimed != 1:

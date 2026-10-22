@@ -5,7 +5,11 @@
   <h3>Floor {{ floor }}</h3>
   {% for s in slots %}
     {% if s.status == 'available' %}
-      <a class="slot available" href="{{ url_for('slots.book', slot_id=s.id) }}">{{ s.slot_number }}</a>
+      {% if current_user.role == 'customer' %}
+        <a class="slot available" href="{{ url_for('slots.book', slot_id=s.id) }}">{{ s.slot_number }}</a>
+      {% else %}
+        <span class="slot available">{{ s.slot_number }}</span>
+      {% endif %}
     {% else %}
       <span class="slot occupied">{{ s.slot_number }}</span>
     {% endif %}
