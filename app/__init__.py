@@ -1,3 +1,6 @@
+
+import os
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
@@ -6,10 +9,22 @@ db = SQLAlchemy()
 
 def create_app(config=None):
     app = Flask(__name__)
-    app.config["SECRET_KEY"] = "change-me-in-production"
+
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///vps.db"
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = (
+        os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
+    )
+
     if config:
         app.config.update(config)
+
+    if not app.config.get("SECRET_KEY"):
+        raise RuntimeError(
+            "SECRET_KEY must be set in the environment or app config."
+        )
 
     db.init_app(app)
 
@@ -30,4 +45,5 @@ def create_app(config=None):
 
     with app.app_context():
         db.create_all()
+
     return app

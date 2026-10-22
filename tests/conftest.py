@@ -6,7 +6,11 @@ from app.models import ParkingSlot, User
 
 @pytest.fixture
 def app():
-    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
+    app = create_app({
+        "TESTING": True,
+        "SECRET_KEY": "test-secret-key-only",
+        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+    })
     yield app
     with app.app_context():
         db.session.remove()
