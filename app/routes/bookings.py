@@ -1,9 +1,9 @@
 from flask import Blueprint, abort, flash, redirect, render_template, url_for
-
+import logging
 from app import db
 from app.models import Booking
 from app.utils import complete_booking, current_user, login_required
-
+logger = logging.getLogger(__name__)
 bookings_bp = Blueprint("bookings", __name__)
 
 
@@ -14,6 +14,7 @@ def history():
     bookings = (Booking.query.filter_by(user_id=user.id)
                 .order_by(Booking.check_in.desc()).all())
     return render_template("history.html", bookings=bookings)
+
 
 
 
@@ -32,7 +33,14 @@ def checkout(booking_id):
     if booking.status != "active":
         return "Booking is already completed.", 409
 
-    complete_booking(booking)
-    db.session.commit()
+    try:
+        complete_booking(booking)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception(
+            "Checkout failed for booking_id=%s", booking_id
+        )
+        abort(500, description="Checkout failed. Please try again.")
     flash("Checked out successfully.")
     return redirect(url_for("bookings.history"))

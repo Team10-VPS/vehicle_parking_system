@@ -143,3 +143,33 @@ def test_history_checkout_has_confirmation_prompt(user_client, make_slot):
     assert response.status_code == 200
     assert b"onsubmit" in response.data
     assert b"Are you sure you want to check out this booking?" in response.data
+
+
+def test_checkout_commit_failure_rolls_back(
+    app, user_client, make_slot, monkeypatch
+):
+    """A failed checkout commit must leave booking and slot unchanged."""
+    slot_id = make_slot()
+    book(user_client, slot_id)
+
+    with app.app_context():
+        booking = Booking.query.first()
+        booking_id = booking.id
+        original_status = booking.status
+        original_slot_status = booking.slot.status
+        session_class = type(db.session())
+
+    def fail_commit(self):
+        raise RuntimeError("Simulated database commit failure")
+
+    monkeypatch.setattr(session_class, "commit", fail_commit)
+
+    response = user_client.post(f"/checkout/{booking_id}")
+
+    assert response.status_code == 500
+
+    with app.app_context():
+        db.session.expire_all()
+        booking = db.session.get(Booking, booking_id)
+        assert booking.status == original_status
+        assert booking.slot.status == original_slot_status
