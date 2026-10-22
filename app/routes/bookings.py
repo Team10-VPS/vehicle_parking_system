@@ -16,18 +16,22 @@ def history():
     return render_template("history.html", bookings=bookings)
 
 
+
 @bookings_bp.route("/checkout/<int:booking_id>", methods=["POST"])
 @login_required
 def checkout(booking_id):
     user = current_user()
     booking = db.session.get(Booking, booking_id)
+
     if booking is None:
         abort(404)
+
     if booking.user_id != user.id and not user.is_admin:
         abort(403)
+
     if booking.status != "active":
-        flash("Booking already checked out.")
-        return redirect(url_for("bookings.history"))
+        return "Booking is already completed.", 409
+
     complete_booking(booking)
     db.session.commit()
     flash("Checked out successfully.")
