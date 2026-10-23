@@ -1,3 +1,8 @@
+
+import os
+
+os.environ.setdefault("SECRET_KEY", "dev-only-secret-key")
+
 from app import create_app
 
 app = create_app()

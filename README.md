@@ -30,6 +30,13 @@ python run.py                # open http://127.0.0.1:5000
 ```
 Demo logins: `admin@vps.com / admin123`, `user@vps.com / user123`
 
+### Secret Key Configuration
+
+For local development, `run.py` and `seed.py` use a development-only fallback secret key.
+
+For production, set a strong, unique `SECRET_KEY` environment variable before starting the application. Never use the development fallback secret in production.
+
+
 ## Run tests
 ```bash
 pytest -v

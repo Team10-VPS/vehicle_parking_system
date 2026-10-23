@@ -2,6 +2,7 @@
 import logging
 from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
+import pytest
 
 from app import db
 from app.models import User
@@ -123,6 +124,25 @@ def test_logout_invalidates_session(user_client):
     assert user_client.get("/history").status_code == 302
 
 
+
+def test_app_requires_secret_key(monkeypatch):
+    """The app must reject a missing secret key."""
+    from app import create_app
+
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+
+    with pytest.raises(RuntimeError, match="SECRET_KEY must be set"):
+        create_app({
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+        })
+
+
+def test_session_cookie_security_settings(app):
+    """Session cookies must use secure browser settings."""
+    assert app.config["SESSION_COOKIE_HTTPONLY"] is True
+    assert app.config["SESSION_COOKIE_SAMESITE"] == "Lax"
+    assert app.config["SESSION_COOKIE_SECURE"] is False
 
 def test_failed_login_is_logged(client, caplog):
     """Failed login attempts must be logged without exposing passwords."""
