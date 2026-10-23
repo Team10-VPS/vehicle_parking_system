@@ -65,10 +65,11 @@ def create_app(config=None):
     from app.utils import current_user
     from app.routes.auth import auth_bp
     from app.routes.slots import slots_bp
+    from app.routes.vehicles import vehicles_bp
     from app.routes.bookings import bookings_bp
     from app.routes.admin import admin_bp
 
-    for bp in (auth_bp, slots_bp, bookings_bp, admin_bp):
+    for bp in (auth_bp, slots_bp, bookings_bp, admin_bp, vehicles_bp):
         app.register_blueprint(bp)
 
     @app.context_processor

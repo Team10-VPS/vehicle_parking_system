@@ -16,7 +16,8 @@ history and admin slot management. Built for the Software Engineering Mini Proje
 ## Features
 - Registration (duplicate email check), login, logout, hashed passwords
 - Parking slot dashboard grouped by floor
-- Book a slot (new or existing vehicle), automatic check-in time
+- Register and view your vehicles; book a slot with a new or owned registered vehicle
+- Automatic check-in time and booking history linked to the selected vehicle
 - Customer check-out (owner/admin only), booking history
 - Admin: add/remove slots, view active bookings, force check-out
 

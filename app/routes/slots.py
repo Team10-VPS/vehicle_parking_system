@@ -6,7 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
 from app.models import Booking, ParkingSlot, Vehicle, utcnow
-from app.utils import current_user, login_required, valid_plate
+from app.utils import current_user, login_required, valid_plate, valid_vehicle_type
 
 slots_bp = Blueprint("slots", __name__)
 
@@ -35,14 +35,16 @@ def book(slot_id):
         flash("That slot is already occupied.")
         return redirect(url_for("slots.dashboard"))
 
-    return render_template("book.html", slot=slot)
+    vehicles = Vehicle.query.filter_by(owner_id=current_user().id).order_by(Vehicle.plate).all()
+    return render_template("book.html", slot=slot, vehicles=vehicles)
 
 
 def booking_error(message, status, slot=None):
     db.session.rollback()
     flash(message)
     if slot is not None:
-        return render_template("book.html", slot=slot), status
+        vehicles = Vehicle.query.filter_by(owner_id=current_user().id).order_by(Vehicle.plate).all()
+        return render_template("book.html", slot=slot, vehicles=vehicles), status
     return dashboard(), status
 
 
@@ -54,6 +56,7 @@ def create_booking():
         abort(403)
 
     raw_slot_id = request.form.get("slot_id", "").strip()
+    raw_vehicle_id = request.form.get("vehicle_id", "").strip()
     plate = request.form.get("vehicle_number", "").strip().upper()
     vtype = request.form.get("vehicle_type", "").strip().lower()
 
@@ -65,10 +68,21 @@ def create_booking():
         return booking_error("Enter a valid slot ID.", 400)
     if slot_id < 1 or slot_id > 2**63 - 1:
         return booking_error("Enter a valid slot ID.", 400)
-    if not valid_plate(plate):
-        return booking_error("Enter a valid vehicle number (3-15 letters, digits, space or hyphen).", 400)
-    if vtype not in ("car", "bike", "suv", "van"):
-        return booking_error("Invalid vehicle type.", 400)
+    if raw_vehicle_id:
+        if not raw_vehicle_id.isascii() or not raw_vehicle_id.isdecimal():
+            return booking_error("Select a valid vehicle.", 400)
+        try:
+            vehicle_id = int(raw_vehicle_id)
+        except ValueError:
+            return booking_error("Select a valid vehicle.", 400)
+        if vehicle_id < 1 or vehicle_id > 2**63 - 1:
+            return booking_error("Select a valid vehicle.", 400)
+    else:
+        vehicle_id = None
+        if not valid_plate(plate):
+            return booking_error("Enter a valid vehicle number (3-15 letters, digits, space or hyphen).", 400)
+        if not valid_vehicle_type(vtype):
+            return booking_error("Invalid vehicle type.", 400)
 
     slot = db.session.get(ParkingSlot, slot_id)
     if slot is None:
@@ -76,9 +90,16 @@ def create_booking():
     if slot.status != "available":
         return booking_error("That slot is already occupied.", 409)
 
-    vehicle = Vehicle.query.filter_by(plate=plate).first()
-    if vehicle and vehicle.owner_id != user.id:
-        return booking_error("That vehicle is registered to another user.", 409, slot)
+    if vehicle_id is not None:
+        vehicle = db.session.get(Vehicle, vehicle_id)
+        if vehicle is None or vehicle.owner_id != user.id:
+            return booking_error("Select one of your registered vehicles.", 403, slot)
+    else:
+        vehicle = Vehicle.query.filter_by(plate=plate).first()
+        if vehicle and vehicle.owner_id != user.id:
+            return booking_error("That vehicle is registered to another user.", 409, slot)
+        if vehicle and vehicle.vehicle_type != vtype:
+            return booking_error("Vehicle type does not match the registered vehicle.", 400, slot)
 
     try:
         # Claim the slot only if it is free and has no active booking.

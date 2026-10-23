@@ -78,6 +78,7 @@ def test_valid_email(email, ok):
 @pytest.mark.parametrize("plate,ok", [
     ("KA01AB1234", True), ("TN-09 X 1", True),
     ("", False), ("AB", False), ("<script>", False), ("A" * 16, False),
+    ("---", False),
 ])
 def test_valid_plate(plate, ok):
     """TC-Sec-04 / TC-Book-02 (boundary lengths)"""

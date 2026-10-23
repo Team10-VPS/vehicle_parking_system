@@ -9,6 +9,7 @@ from app.models import User, utcnow
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 PLATE_RE = re.compile(r"^[A-Za-z0-9\- ]{3,15}$")
 MIN_PASSWORD_LEN = 6
+VEHICLE_TYPES = ("car", "bike", "suv", "van")
 
 
 def valid_email(email):
@@ -16,7 +17,11 @@ def valid_email(email):
 
 
 def valid_plate(plate):
-    return bool(plate and PLATE_RE.match(plate))
+    return bool(plate and PLATE_RE.fullmatch(plate) and any(c.isalnum() for c in plate))
+
+
+def valid_vehicle_type(vehicle_type):
+    return vehicle_type in VEHICLE_TYPES
 
 
 def current_user():

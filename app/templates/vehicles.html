@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block content %}
+<h2>My Vehicles</h2>
+<form method="post" action="{{ url_for('vehicles.index') }}">
+  <p><label>Vehicle number <input name="vehicle_number" maxlength="15" required></label></p>
+  <p><label>Vehicle type <select name="vehicle_type">
+    <option value="car">Car</option><option value="bike">Bike</option>
+    <option value="suv">SUV</option><option value="van">Van</option>
+  </select></label></p>
+  <button type="submit">Register vehicle</button>
+</form>
+{% if vehicles %}
+<table><tr><th>Vehicle number</th><th>Type</th></tr>
+{% for vehicle in vehicles %}<tr><td>{{ vehicle.plate }}</td><td>{{ vehicle.vehicle_type }}</td></tr>{% endfor %}
+</table>
+{% else %}<p>No vehicles registered yet.</p>{% endif %}
+{% endblock %}
