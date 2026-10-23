@@ -1,4 +1,5 @@
 """Slot display and booking integration tests."""
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
@@ -12,12 +13,26 @@ from app.models import Booking, ParkingSlot, User, Vehicle
 from tests.conftest import login
 
 
+
+
 def test_dashboard_lists_slots(user_client, make_slot):
-    """TC-Slot-01"""
-    make_slot("A-01", 1)
+    """TC-Slot-01: dashboard displays slots with their correct availability."""
+    make_slot("A-01", 1, "available")
     make_slot("A-02", 1, "occupied")
-    r = user_client.get("/")
-    assert b"A-01" in r.data and b"A-02" in r.data
+
+    response = user_client.get("/")
+    body = response.data.decode()
+
+    assert response.status_code == 200
+    assert re.search(
+        r'<a class="slot available"[^>]*>A-01</a>',
+        body
+    )
+    assert re.search(
+        r'<span class="slot occupied">A-02</span>',
+        body
+    )
+
 
 
 def test_dashboard_route(user_client):
