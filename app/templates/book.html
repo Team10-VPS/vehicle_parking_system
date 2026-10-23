@@ -2,9 +2,15 @@
 <h2>Book Slot {{ slot.slot_number }} (Floor {{ slot.floor }})</h2>
 <form method="post" action="{{ url_for('slots.create_booking') }}">
   <input type="hidden" name="slot_id" value="{{ slot.id }}">
-  <p><input name="vehicle_number" placeholder="Vehicle number" required></p>
-  <p><select name="vehicle_type">
+  {% if vehicles %}
+  <p><label>Registered vehicle <select name="vehicle_id">
+    <option value="">Register a new vehicle with this booking</option>
+    {% for vehicle in vehicles %}<option value="{{ vehicle.id }}">{{ vehicle.plate }} ({{ vehicle.vehicle_type }})</option>{% endfor %}
+  </select></label></p>
+  {% endif %}
+  <p><label>New vehicle number <input name="vehicle_number" maxlength="15"></label></p>
+  <p><label>New vehicle type <select name="vehicle_type">
     <option>car</option><option>bike</option><option>suv</option><option>van</option>
-  </select></p>
+  </select></label></p>
   <button type="submit">Book &amp; Check-in</button>
 </form>{% endblock %}

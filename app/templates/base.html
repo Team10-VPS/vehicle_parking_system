@@ -9,6 +9,7 @@
 <nav>
   <a href="{{ url_for('slots.dashboard') }}">Dashboard</a>
   <a href="{{ url_for('bookings.history') }}">My Bookings</a>
+  {% if current_user %}<a href="{{ url_for('vehicles.index') }}">My Vehicles</a>{% endif %}
   {% if current_user %}
     {% if current_user.is_admin %}
     <a href="{{ url_for('admin.slots') }}">Admin Slots</a>
