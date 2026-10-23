@@ -62,3 +62,7 @@ docs/              test cases and RTM
 `main` is always green. Work on `feature/<name>` branches and merge via pull request.
 
 Documents: see docs/ (SRS, SAD, Test Plan, test cases and RTM, deviations).
+
+## Demo
+Sprint 1 demo: [demo/Sprint1_Demo.mp4](demo/Sprint1_Demo.mp4)
+
