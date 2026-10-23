@@ -60,3 +60,5 @@ docs/              test cases and RTM
 
 ## Branching
 `main` is always green. Work on `feature/<name>` branches and merge via pull request.
+
+Documents: see docs/ (SRS, SAD, Test Plan, test cases and RTM, deviations).
