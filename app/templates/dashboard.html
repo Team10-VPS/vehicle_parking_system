@@ -1,17 +1,56 @@
-{% extends "base.html" %}{% block content %}
-<h2>Parking Slots</h2>
-{% if not floors %}<p>No parking slots available yet.</p>{% endif %}
-{% for floor, slots in floors.items() %}
-  <h3>Floor {{ floor }}</h3>
-  {% for s in slots %}
-    {% if s.status == 'available' %}
-      {% if current_user.role == 'customer' %}
-        <a class="slot available" href="{{ url_for('slots.book', slot_id=s.id) }}">{{ s.slot_number }}</a>
-      {% else %}
-        <span class="slot available">{{ s.slot_number }}</span>
-      {% endif %}
-    {% else %}
-      <span class="slot occupied">{{ s.slot_number }}</span>
-    {% endif %}
+{% extends "base.html" %}
+{% block title %}Parking Dashboard · Parkwise{% endblock %}
+{% block content %}
+  <section class="page-heading">
+    <p class="eyebrow">YOUR PARKING, SIMPLIFIED</p>
+    <h1>Parking Slots</h1>
+    <p class="page-description">
+      Browse parking by floor. Choose any available slot to book and check in.
+    </p>
+  </section>
+
+  <div class="slot-legend" aria-label="Parking slot legend">
+    <span class="legend-item">
+      <span class="legend-dot available-dot"></span>
+      Available
+    </span>
+    <span class="legend-item">
+      <span class="legend-dot occupied-dot"></span>
+      Occupied
+    </span>
+    <span class="legend-item">Select an available slot to book</span>
+  </div>
+
+  {% if not floors %}
+    <div class="empty-state">
+      <h3>No parking slots available yet.</h3>
+      <p>Parking slots will appear here once they have been added.</p>
+    </div>
+  {% endif %}
+
+  {% for floor, slots in floors.items() %}
+    <section class="floor-card">
+      <div class="floor-heading">
+        <div>
+          <p class="eyebrow">PARKING LEVEL</p>
+          <h2>Floor {{ floor }}</h2>
+        </div>
+        <span class="floor-count">{{ slots|length }} slots</span>
+      </div>
+
+      <div class="slot-grid">
+        {% for s in slots %}
+          {% if s.status == 'available' %}
+            {% if current_user.role == 'customer' %}
+              <a class="slot available" href="{{ url_for('slots.book', slot_id=s.id) }}">{{ s.slot_number }}</a>
+            {% else %}
+              <span class="slot available">{{ s.slot_number }}</span>
+            {% endif %}
+          {% else %}
+            <span class="slot occupied">{{ s.slot_number }}</span>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
   {% endfor %}
-{% endfor %}{% endblock %}
+{% endblock %}
