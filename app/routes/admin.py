@@ -1,14 +1,15 @@
 import logging
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
 from app.models import Booking, ParkingSlot
 from app.utils import admin_required, complete_booking, current_user
-
 logger = logging.getLogger(__name__)
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+
 
 
 @admin_bp.route("/slots", methods=["GET", "POST"])
@@ -17,6 +18,7 @@ def slots():
     if request.method == "POST":
         number = request.form.get("slot_number", "").strip().upper()
         floor = request.form.get("floor", "").strip()
+
         if not number or len(number) > 10:
             flash("Slot number is required (max 10 characters).")
         elif not floor.isdigit():
@@ -24,10 +26,28 @@ def slots():
         elif ParkingSlot.query.filter_by(slot_number=number).first():
             flash("Slot number already exists.")
         else:
-            db.session.add(ParkingSlot(slot_number=number, floor=int(floor)))
-            db.session.commit()
-            flash(f"Slot {number} added.")
-    all_slots = ParkingSlot.query.order_by(ParkingSlot.floor, ParkingSlot.slot_number).all()
+            try:
+                db.session.add(
+                    ParkingSlot(
+                        slot_number=number,
+                        floor=int(floor),
+                    )
+                )
+                db.session.commit()
+            except SQLAlchemyError:
+                db.session.rollback()
+                logger.exception("Admin slot creation failed")
+                flash(
+                    "Could not add the slot. "
+                    "Please check the details and try again."
+                )
+            else:
+                flash(f"Slot {number} added.")
+
+    all_slots = ParkingSlot.query.order_by(
+        ParkingSlot.floor,
+        ParkingSlot.slot_number,
+    ).all()
     return render_template("admin_slots.html", slots=all_slots)
 
 

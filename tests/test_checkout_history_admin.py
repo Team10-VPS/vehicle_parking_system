@@ -2,6 +2,8 @@
 
 import logging
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from app import db
 from app.models import Booking, ParkingSlot
 from tests.conftest import login
@@ -231,3 +233,30 @@ def test_admin_bookings_page_has_confirmation_prompt(admin_client, user_client, 
     page = admin_client.get("/admin/bookings")
     assert b"onsubmit" in page.data
     assert b"/admin/checkout/1" in page.data
+
+
+def test_admin_add_slot_commit_failure_rolls_back(
+    admin_client, app, monkeypatch
+):
+    """A failed slot creation commit is rolled back with safe feedback."""
+    with app.app_context():
+        session_class = type(db.session())
+
+    def fail_commit(self):
+     raise SQLAlchemyError("Simulated database failure")
+
+    monkeypatch.setattr(session_class, "commit", fail_commit)
+    response = admin_client.post(
+        "/admin/slots",
+        data={"slot_number": "Z-99", "floor": "2"},
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert (
+        b"Could not add the slot. Please check the details and try again."
+        in response.data
+    )
+
+    with app.app_context():
+        assert ParkingSlot.query.filter_by(slot_number="Z-99").count() == 0
