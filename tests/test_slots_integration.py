@@ -291,12 +291,23 @@ def test_booking_rolls_back_database_failure(user_client, make_slot, app):
         assert Booking.query.count() == Vehicle.query.count() == 0
 
 
+
 def test_dashboard_performance_200_slots(user_client, make_slot, app):
-    """TC-Perf-01: <= 2 seconds for 200 slots"""
+    """TC-Perf-01: dashboard responds within 2 seconds for 200 slots."""
     with app.app_context():
-        db.session.add_all([ParkingSlot(slot_number=f"S{i}", floor=i % 5) for i in range(200)])
+        db.session.add_all([
+            ParkingSlot(slot_number=f"S{i}", floor=i % 5)
+            for i in range(200)
+        ])
         db.session.commit()
+
     start = time.perf_counter()
-    r = user_client.get("/")
-    assert r.status_code == 200
-    assert time.perf_counter() - start <= 2.0
+    response = user_client.get("/")
+    elapsed = time.perf_counter() - start
+
+    print(f"\nDashboard response time for 200 slots: {elapsed:.4f} seconds")
+
+    assert response.status_code == 200
+    assert elapsed <= 2.0, (
+        f"Dashboard took {elapsed:.4f}s; expected <= 2.0s"
+    )
