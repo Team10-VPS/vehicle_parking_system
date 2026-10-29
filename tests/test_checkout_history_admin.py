@@ -65,6 +65,30 @@ def test_history_empty(user_client):
     assert b"No bookings yet" in user_client.get("/history").data
 
 
+def test_completed_booking_remains_in_history(user_client, make_slot):
+    """Completed bookings remain visible after checkout."""
+    slot_id = make_slot("A-01")
+    book(user_client, slot_id, "AAA111")
+
+    response = user_client.post("/checkout/1", follow_redirects=True)
+
+    assert response.status_code == 200
+    assert b"My Booking History" in response.data
+    assert b"A-01" in response.data
+    assert b"AAA111" in response.data
+    assert b"completed" in response.data
+    assert b"Check-out" in response.data
+
+
+def test_history_requires_login(client):
+    """Unauthenticated users are redirected to login."""
+    response = client.get("/history")
+
+    assert response.status_code == 302
+    assert "/login" in response.headers["Location"]
+
+
+
 def test_admin_add_slot(admin_client, app):
     """TC-Admin-01"""
     r = admin_client.post("/admin/slots", data={"slot_number": "z-9", "floor": "4"},
