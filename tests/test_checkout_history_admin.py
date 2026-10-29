@@ -1,4 +1,7 @@
 """Check-out, history and admin integration tests."""
+
+import logging
+
 from app import db
 from app.models import Booking, ParkingSlot
 from tests.conftest import login
@@ -104,7 +107,7 @@ def test_admin_view_and_force_checkout(app, admin_client, user_client, make_slot
     sid = make_slot()
     book(user_client, sid)
     assert b"user@test.com" in admin_client.get("/admin/bookings").data
-    admin_client.post("/admin/bookings/1/force-checkout")
+    admin_client.post("/admin/checkout/1")
     with app.app_context():
         assert db.session.get(Booking, 1).status == "completed"
         assert db.session.get(ParkingSlot, sid).status == "available"
@@ -115,7 +118,7 @@ def test_non_admin_blocked_from_admin_routes(user_client):
     assert user_client.get("/admin/slots").status_code == 403
     assert user_client.get("/admin/bookings").status_code == 403
     assert user_client.post("/admin/slots", data={"slot_number": "X", "floor": "1"}).status_code == 403
-    assert user_client.post("/admin/bookings/1/force-checkout").status_code == 403
+    assert user_client.post("/admin/checkout/1").status_code == 403
 
 
 def test_anonymous_blocked_from_admin_routes(client):
@@ -173,3 +176,34 @@ def test_checkout_commit_failure_rolls_back(
         booking = db.session.get(Booking, booking_id)
         assert booking.status == original_status
         assert booking.slot.status == original_slot_status
+
+def test_force_checkout_completed_booking_returns_409(admin_client, user_client, make_slot):
+    """TC-Admin-03: force checkout of a completed booking returns 409."""
+    book(user_client, make_slot())
+    assert admin_client.post("/admin/checkout/1").status_code == 302
+    response = admin_client.post("/admin/checkout/1")
+    assert response.status_code == 409
+    assert b"already completed" in response.data
+
+
+def test_force_checkout_unknown_booking_returns_404(admin_client):
+    """TC-Admin-03"""
+    assert admin_client.post("/admin/checkout/999").status_code == 404
+
+
+def test_force_checkout_is_logged_with_admin_id(admin_client, user_client, make_slot, caplog):
+    """TC-Admin-03 / SAD 4.4: forced checkouts are logged with the admin id."""
+    caplog.set_level(logging.INFO, logger="app.routes.admin")
+    book(user_client, make_slot())
+    admin_client.post("/admin/checkout/1")
+    records = [r for r in caplog.records if getattr(r, "action", None) == "force_checkout"]
+    assert len(records) == 1
+    assert records[0].user_id is not None
+
+
+def test_admin_bookings_page_has_confirmation_prompt(admin_client, user_client, make_slot):
+    """SAD 4.5: confirm before forced check-out."""
+    book(user_client, make_slot())
+    page = admin_client.get("/admin/bookings")
+    assert b"onsubmit" in page.data
+    assert b"/admin/checkout/1" in page.data
