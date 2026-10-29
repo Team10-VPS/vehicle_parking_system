@@ -1,8 +1,12 @@
+import logging
+
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
 from app import db
 from app.models import Booking, ParkingSlot
-from app.utils import admin_required, complete_booking
+from app.utils import admin_required, complete_booking, current_user
+
+logger = logging.getLogger(__name__)
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -49,14 +53,26 @@ def bookings():
     return render_template("admin_bookings.html", bookings=active)
 
 
-@admin_bp.route("/bookings/<int:booking_id>/force-checkout", methods=["POST"])
+@admin_bp.route("/checkout/<int:booking_id>", methods=["POST"])
 @admin_required
 def force_checkout(booking_id):
     booking = db.session.get(Booking, booking_id)
     if booking is None:
         abort(404)
-    if booking.status == "active":
+    if booking.status != "active":
+        return "Booking is already completed.", 409
+    admin = current_user()
+    try:
         complete_booking(booking)
         db.session.commit()
-        flash("Booking force checked out.")
+    except Exception:
+        db.session.rollback()
+        logger.exception("Force checkout failed for booking_id=%s", booking_id)
+        abort(500, description="Force checkout failed. Please try again.")
+    logger.info(
+        "user_id=%s action=force_checkout booking_id=%s",
+        admin.id, booking_id,
+        extra={"user_id": admin.id, "action": "force_checkout"},
+    )
+    flash("Booking force checked out.")
     return redirect(url_for("admin.bookings"))
