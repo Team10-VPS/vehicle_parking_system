@@ -32,6 +32,7 @@ class ParkingSlot(db.Model):
     slot_number = db.Column(db.String(10), unique=True, nullable=False)
     floor = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(20), nullable=False, default="available")
+    vehicle_type = db.Column(db.String(20), nullable=False, default="car")
 
 
 class Vehicle(db.Model):

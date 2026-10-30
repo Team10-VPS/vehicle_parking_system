@@ -260,3 +260,26 @@ def test_admin_add_slot_commit_failure_rolls_back(
 
     with app.app_context():
         assert ParkingSlot.query.filter_by(slot_number="Z-99").count() == 0
+
+def test_admin_add_slot_with_vehicle_type(admin_client, app):
+    """TC-Admin-01 / VPS-F-015: a slot is saved with its vehicle type."""
+    admin_client.post("/admin/slots", data={"slot_number": "B-1", "floor": "1", "vehicle_type": "bike"})
+    with app.app_context():
+        assert ParkingSlot.query.filter_by(slot_number="B-1").one().vehicle_type == "bike"
+
+
+def test_admin_add_slot_rejects_invalid_vehicle_type(admin_client, app):
+    """TC-Admin-01 / TC-Sec-04"""
+    r = admin_client.post("/admin/slots", data={"slot_number": "B-2", "floor": "1", "vehicle_type": "truck"})
+    assert b"Invalid vehicle type" in r.data
+    with app.app_context():
+        assert ParkingSlot.query.filter_by(slot_number="B-2").count() == 0
+
+
+def test_admin_slots_page_has_remove_confirmation(admin_client, make_slot):
+    """TC-Admin-02: confirm before slot removal."""
+    make_slot()
+    page = admin_client.get("/admin/slots")
+    assert b"onsubmit" in page.data
+    assert b"Remove this slot?" in page.data
+    

@@ -5,7 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
 from app.models import Booking, ParkingSlot
-from app.utils import admin_required, complete_booking, current_user
+from app.utils import admin_required, complete_booking, current_user, valid_vehicle_type
 logger = logging.getLogger(__name__)
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -18,11 +18,14 @@ def slots():
     if request.method == "POST":
         number = request.form.get("slot_number", "").strip().upper()
         floor = request.form.get("floor", "").strip()
+        vehicle_type = request.form.get("vehicle_type", "car").strip().lower()
 
         if not number or len(number) > 10:
             flash("Slot number is required (max 10 characters).")
         elif not floor.isdigit():
             flash("Floor must be a non-negative number.")
+        elif not valid_vehicle_type(vehicle_type):
+            flash("Invalid vehicle type.")
         elif ParkingSlot.query.filter_by(slot_number=number).first():
             flash("Slot number already exists.")
         else:
@@ -31,6 +34,7 @@ def slots():
                     ParkingSlot(
                         slot_number=number,
                         floor=int(floor),
+                        vehicle_type=vehicle_type
                     )
                 )
                 db.session.commit()

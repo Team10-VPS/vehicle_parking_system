@@ -33,12 +33,11 @@ Each item below is explained in the final demo. Status is as of the end of Sprin
 - **Confirmation prompts and logging for forced check-out:** forced check-outs are logged with the admin id (SAD 4.4).
 - **`seed.py`:** creates a demo admin, a demo customer and 30 slots; the SRS expects slots to be configured manually by an admin (SRS 2.5), which is still possible.
 - **Full traceability:** the RTM sheet maps all 27 requirements, not only the 10 rows listed in SRS section 8.
+- **UI redesign:** Parkwise branding, restyled navigation, dashboard and pages, plus a slot legend; no functional change
 
 ## 3. Not yet implemented
-
-- **Slot `vehicle_type`** shown on the dashboard and accepted in the admin add-slot form (SRS VPS-F-005 and VPS-F-015, SAD 4.2 and 4.3), tracked in issue #21
-- Confirmation prompt before slot removal (#21); check-out and force check-out already have one
-- Text labels (Available / Occupied) on the dashboard, not colour only (SAD 4.5)
+- **Slot `vehicle_type` on the customer dashboard** (SRS VPS-F-005): admins can now enter and see the type when adding slots, but customers do not see it on the dashboard yet
+- Text status on each slot (SAD 4.5): the dashboard legend names Available and Occupied, but individual slots are still distinguished by colour
 - Index on slot floor and slot number (SAD 3.7)
 - CSRF tokens (SAD 3.9); only the SameSite cookie setting is in place
 - Logging of bookings and slot add/remove (login, logout, check-out failures, forced check-outs and slot-creation failures are logged)
