@@ -10,6 +10,7 @@ def app():
         "TESTING": True,
         "SECRET_KEY": "test-secret-key-only",
         "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+        "WTF_CSRF_ENABLED": False,
     })
     yield app
     with app.app_context():

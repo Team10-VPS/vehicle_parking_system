@@ -1,6 +1,7 @@
 {% extends "base.html" %}{% block content %}
 <h2>Book Slot {{ slot.slot_number }} (Floor {{ slot.floor }})</h2>
 <form method="post" action="{{ url_for('slots.create_booking') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="slot_id" value="{{ slot.id }}">
   {% if vehicles %}
   <p><label>Registered vehicle <select name="vehicle_id">

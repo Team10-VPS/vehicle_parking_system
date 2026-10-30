@@ -8,6 +8,7 @@
 <td>
 <form method="post" action="{{ url_for('admin.force_checkout', booking_id=b.id) }}"
       onsubmit="return confirm('Force check out this booking?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <button type="submit">Force checkout</button>
 </form>
 </td></tr>

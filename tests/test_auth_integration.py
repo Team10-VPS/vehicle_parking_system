@@ -118,7 +118,7 @@ def test_dashboard_requires_login(client):
 def test_logout_invalidates_session(user_client):
     """TC-Sec-01 / VPS-SR-003"""
     assert user_client.get("/").status_code == 200
-    user_client.get("/logout")
+    user_client.post("/logout")
     r = user_client.get("/")
     assert r.status_code == 302 and "/login" in r.headers["Location"]
     assert user_client.get("/history").status_code == 302
@@ -186,7 +186,7 @@ def test_logout_is_logged(user_client, caplog):
     """Logout must produce an INFO log."""
     caplog.set_level(logging.INFO, logger="app.routes.auth")
 
-    user_client.get("/logout")
+    user_client.post("/logout")
 
     records = [
         record for record in caplog.records

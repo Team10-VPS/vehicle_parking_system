@@ -166,6 +166,7 @@ def test_simultaneous_requests_create_at_most_one_booking(tmp_path):
         "TESTING": True,
         "SECRET_KEY": "test-secret-key-only",
         "SQLALCHEMY_DATABASE_URI": database_uri,
+        "WTF_CSRF_ENABLED": False,
     })
 
     with app.app_context():

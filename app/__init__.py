@@ -3,9 +3,10 @@ import os
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-
+from flask_wtf.csrf import CSRFProtect
 
 db = SQLAlchemy()
+csrf = CSRFProtect()
 
 
 class SafeFormatter(logging.Formatter):
@@ -58,6 +59,7 @@ def create_app(config=None):
         raise RuntimeError(
             "SECRET_KEY must be set in the environment or app config."
         )
+    csrf.init_app(app)
 
     db.init_app(app)
 
