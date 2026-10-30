@@ -17,7 +17,7 @@ Each item below is explained in the final demo. Status is as of the end of Sprin
 | 7 | SAD 4.3 | Login failure returns 401; invalid registration 400; duplicate email 409 | Form is shown again with status 200 and a flash message | Friendlier for server-rendered forms; message text is as specified |
 | 8 | SAD 4.3 | Admin duplicate slot and remove-occupied-slot return 409 | Flash message and redirect or re-render; a failed slot creation is rolled back and shows a safe message | Admin pages kept simple |
 | 9 | SAD 4.3 | Successful booking redirects to `/dashboard` | Redirects to `/history` | Shows the new booking and its check-in time straight away |
-| 10 | SAD 4.3 | `/logout` accepts GET and POST | GET only | Plain navigation link |
+| 10 | SAD 4.3 | `/logout` accepts GET and POST | POST only; logout is submitted through a form protected by a CSRF token | Logout changes authentication state and should not be triggered through a GET request |
 | 11 | SAD 4.3 | Check-out of a completed booking returns 409 | Check-out and force check-out of a completed booking return 409 with a plain-text body ("Booking is already completed.") | No styled error page yet |
 | 12 | SAD 4.5 | Navigation: Dashboard, Book, History, Logout, Admin Panel | Dashboard, My Bookings, My Vehicles, Admin Slots, Admin Bookings, Logout; booking starts by clicking an available slot | A separate Book link is not needed |
 | 13 | SAD 3.5 (ADR-003) | Signed session cookie | Same, and `SECRET_KEY` must come from the environment (development fallback in `run.py` and `seed.py`); cookies are HttpOnly and SameSite=Lax | Avoids a hard-coded production secret |
@@ -34,13 +34,14 @@ Each item below is explained in the final demo. Status is as of the end of Sprin
 - **`seed.py`:** creates a demo admin, a demo customer and 30 slots; the SRS expects slots to be configured manually by an admin (SRS 2.5), which is still possible.
 - **Full traceability:** the RTM sheet maps all 27 requirements, not only the 10 rows listed in SRS section 8.
 - **UI redesign:** Parkwise branding, restyled navigation, dashboard and pages, plus a slot legend; no functional change
+- **CSRF protection:** Flask-WTF integration provides CSRF protection for application forms. State-changing requests require valid CSRF tokens, and logout uses POST
 
 ## 3. Not yet implemented
 - **Slot `vehicle_type` on the customer dashboard** (SRS VPS-F-005): admins can now enter and see the type when adding slots, but customers do not see it on the dashboard yet
 - Text status on each slot (SAD 4.5): the dashboard legend names Available and Occupied, but individual slots are still distinguished by colour
 - Index on slot floor and slot number (SAD 3.7)
-- CSRF tokens (SAD 3.9); only the SameSite cookie setting is in place
-- Logging of bookings and slot add/remove (login, logout, check-out failures, forced check-outs and slot-creation failures are logged)
+- CSRF tokens (SAD 3.9); Implemented using Flask-WTF. CSRF tokens are included in application forms, and POST requests without valid tokens are rejected. Two automated CSRF tests pass
+- Logging of bookings and slot add/remove (Login, logout, check-out failures, forced check-outs and slot-creation failures are logged. Booking and slot add/remove logging remain outstanding)
 - Periodic slot/booking consistency check (SAD 4.4, SRS VPS-NF-003); consistency is covered by TC-Rel-01 tests only
 - Styled error pages for 403, 404, 409 and 500
 
