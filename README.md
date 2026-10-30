@@ -65,4 +65,4 @@ Documents: see docs/ (SRS, SAD, Test Plan, test cases and RTM, deviations).
 
 ## Demo
 Sprint 1 demo: [demo/Sprint1_Demo.mp4](demo/Sprint1_Demo.mp4)
-- Sprint 2 Demo: [Watch Sprint 2 Demo](demo/Sprint2_Demo.mp4)
+Sprint 2 Demo: [Watch Sprint 2 Demo](demo/Sprint2_Demo.mp4)
