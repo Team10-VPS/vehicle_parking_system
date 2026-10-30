@@ -1,6 +1,7 @@
 {% extends "base.html" %}{% block content %}
 <h2>My Vehicles</h2>
 <form method="post" action="{{ url_for('vehicles.index') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <p><label>Vehicle number <input name="vehicle_number" maxlength="15" required></label></p>
   <p><label>Vehicle type <select name="vehicle_type">
     <option value="car">Car</option><option value="bike">Bike</option>

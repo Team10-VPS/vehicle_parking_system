@@ -1,6 +1,7 @@
 {% extends "base.html" %}{% block content %}
 <h2>Manage Parking Slots</h2>
 <form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input name="slot_number" placeholder="Slot number" required>
   <input name="floor" placeholder="Floor" required>
   <select name="vehicle_type">
@@ -13,6 +14,11 @@
 <tr><th>Slot</th><th>Floor</th><th>Type</th><th>Status</th><th></th></tr>
 {% for s in slots %}
 <tr><td>{{ s.slot_number }}</td><td>{{ s.floor }}</td><td>{{ s.vehicle_type }}</td><td>{{ s.status }}</td>
-<td><form method="post" action="{{ url_for('admin.delete_slot', slot_id=s.id) }}"
-      onsubmit="return confirm('Remove this slot?');"><button type="submit">Remove</button></form></td></tr>
+<td>
+  <form method="post" action="{{ url_for('admin.delete_slot', slot_id=s.id) }}"
+        onsubmit="return confirm('Remove this slot?');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit">Remove</button>
+  </form>
+</td></tr>
 {% endfor %}</table>{% endblock %}

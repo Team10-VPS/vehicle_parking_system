@@ -61,12 +61,26 @@ def delete_slot(slot_id):
     slot = db.session.get(ParkingSlot, slot_id)
     if slot is None:
         abort(404)
+
     if slot.status != "available":
         flash("Cannot remove an occupied slot.")
     else:
-        db.session.delete(slot)
-        db.session.commit()
-        flash("Slot removed.")
+        try:
+            db.session.delete(slot)
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            logger.exception(
+                "Admin slot deletion failed for slot_id=%s",
+                slot_id,
+            )
+            flash(
+                "Could not remove the slot. "
+                "Please try again."
+            )
+        else:
+            flash("Slot removed.")
+
     return redirect(url_for("admin.slots"))
 
 

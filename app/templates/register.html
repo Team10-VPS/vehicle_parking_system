@@ -1,6 +1,7 @@
 {% extends "base.html" %}{% block content %}
 <h2>Register</h2>
 <form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <p><input name="name" placeholder="Name" required></p>
   <p><input name="email" type="email" placeholder="Email" required></p>
   <p><input name="password" type="password" placeholder="Password (min 6)" required></p>

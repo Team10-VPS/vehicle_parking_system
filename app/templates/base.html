@@ -28,7 +28,10 @@
             <a href="{{ url_for('admin.slots') }}">Admin Slots</a>
             <a href="{{ url_for('admin.bookings') }}">Admin Bookings</a>
           {% endif %}
-          <a class="nav-account" href="{{ url_for('auth.logout') }}">Logout</a>
+         <form method="post" action="{{ url_for('auth.logout') }}">
+             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="nav-account">Logout</button>
+</form>
         {% else %}
           <a href="{{ url_for('auth.login') }}">Login</a>
           <a class="nav-account" href="{{ url_for('auth.register') }}">Get started</a>
