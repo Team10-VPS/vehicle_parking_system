@@ -1,6 +1,6 @@
 # Vehicle Parking System (VPS) - Team 10
 
-![CI](../../actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/Team10-VPS/vehicle_parking_system/actions/workflows/ci.yml/badge.svg)
 
 A Flask + SQLite web app for booking parking slots, check-in/check-out, booking
 history and admin slot management. Built for the Software Engineering Mini Project.
@@ -20,6 +20,7 @@ history and admin slot management. Built for the Software Engineering Mini Proje
 - Automatic check-in time and booking history linked to the selected vehicle
 - Customer check-out (owner/admin only), booking history
 - Admin: add/remove slots, view active bookings, force check-out
+- CSRF protection for form submissions
 
 ## Setup
 ```bash
@@ -42,8 +43,9 @@ For production, set a strong, unique `SECRET_KEY` environment variable before st
 ```bash
 pytest -v
 ```
-Tests live in `tests/`: `test_models.py` (unit), the other three files are integration tests.
-Each test's docstring names the Test Plan case ID (e.g. TC-Reg-01).
+Tests live in `tests/` and cover unit, integration, and security testing.
+The suite currently contains 99 automated test cases.
+Test functions include corresponding Test Plan case IDs where applicable.
 
 ## CI/CD
 GitHub Actions (`.github/workflows/ci.yml`) installs dependencies, checks the app builds
@@ -64,5 +66,5 @@ docs/              test cases and RTM
 Documents: see docs/ (SRS, SAD, Test Plan, test cases and RTM, deviations).
 
 ## Demo
-Sprint 1 demo: [demo/Sprint1_Demo.mp4](demo/Sprint1_Demo.mp4)
-Sprint 2 Demo: [Watch Sprint 2 Demo](demo/Sprint2_Demo.mp4)
+- Sprint 1 demo: [demo/Sprint1_Demo.mp4](demo/Sprint1_Demo.mp4)
+- Sprint 2 Demo: [Watch Sprint 2 Demo](demo/Sprint2_Demo.mp4)
